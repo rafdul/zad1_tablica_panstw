@@ -29,8 +29,6 @@ class TableWithStates {
         if( this.ifDownloadFromApi( storage.getStorageDate() ) === false && storage.getStorageStates().length > 0 ) {
             console.log('Pobrałem dane zapisane w localStorage. Liczba państw w localStorage to: ' + storage.getStorageStates().length);
             console.log('Dane państw zapisane w localStorage: ', storage.getStorageStates());
-            // console.log('tablica w localStorage: ', storage.getStorageStates().length);
-            // this.loadFromLocalStorageStates();
         } else {
             console.log('Pobrałem dane z API');
             this.downloadFromAPI();
@@ -58,20 +56,14 @@ class TableWithStates {
         
     }
 
-    // pobieranie z localStorage zapisanych danych państw
-    // loadFromLocalStorageStates() {
-    //     let listFromStorage = storage.getStorageStates();
-    //     return listFromStorage;
-    // }
-
     // sprawdzenie, czy ponowanie pobrać dane z API (zwrócenie flagi true = pobrać, false = korzystać z localStorage)
     ifDownloadFromApi(timeSavingInLocalStorage) {
         const MS_IN_6DAYS = 6*24*60*60*1000;
         const timeNow = (new Date).getTime();
         const differenceInMs = timeNow - timeSavingInLocalStorage;
 
-        if(differenceInMs <= 30000) {
-            console.log('Od ostatniego pobrania z API upłynęło mniej niż ' + 30000 + 'ms więc korzystam z localstorage i nie pobieram nowych danych z API.')
+        if(differenceInMs <= MS_IN_6DAYS) {
+            console.log('Od ostatniego pobrania z API upłynęło mniej niż ' + MS_IN_6DAYS + 'ms więc korzystam z localstorage i nie pobieram nowych danych z API.')
             return false;
         } else {
             console.log('Od ostatniego pobrania z API upłynęło więcej niż 6 dni, więc ponownie pobieram dane z API.')
@@ -92,12 +84,12 @@ class TableWithStates {
 
     // pętla po starym zestawie danych
     loopForOldData(oldData, newData) {
-        for(let i = 0; i< oldData.length; i++) {
+        for(let i = 0; i < oldData.length; i++) {
             newData.find(el => this.comparePopulation(el, oldData[i]));
         }
         return (this.tableAfterComparison.length > 0) 
-                ? console.log('Od ostatniego pobrania z API zmieniła się liczba ludności w krajach: ', this.tableAfterComparison) 
-                : console.log('Od ostatniego pobrania z API nie zmieniła się liczba ludności w żadnym kraju.');
+            ? console.log('Od ostatniego pobrania z API zmieniła się liczba ludności w krajach: ', this.tableAfterComparison) 
+            : console.log('Od ostatniego pobrania z API nie zmieniła się liczba ludności w żadnym kraju.');
     }
 }
 
