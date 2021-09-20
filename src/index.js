@@ -5,6 +5,7 @@
  * Przy starcie aplikacji sprawdź, czy dane państw istnieją w pamięci przeglądarki. Jeśli nie, ściągnij je,
  * Przy starcie aplikacji sprawdź ile czasu minęło od poprzedniego ściągnięcia danych państw. 
  * Jeśli od ostatniego razu minęło co najmniej 7 dni, ściągnij i zapisz je ponownie.
+ * 
  * Stwórz metodę, która przy ponownym ściąganiu danych państw porówna populację między starym 
  * i nowym zestawem danych oraz wyświetli wszystkie nazwy państw, których populacja uległa zmianie.
  *
@@ -22,72 +23,81 @@ window.onload = function() {
 class TableWithStates {
     url = "https://restcountries.eu/rest/v2/all";
     dateDownloadFromApi = '';
+    tableAfterComparison =[];
 
     init() {
-        // const MS_IN_6DAYS = 6*24*60*60*1000;
-        // const timeSavingInLocalStorage = storage.getStorageDate()
-        // const timeNow = (new Date).getTime();
-        // const timeFromLastDownloadFromApi = timeNow - timeSavingInLocalStorage;
-
-        // if(this.loadFromLocalStorageStates().length > 0 && timeFromLastDownloadFromApi < MS_IN_6DAYS) {
-        //     console.log('pobranie z localstorage; lenght:' + this.loadFromLocalStorageStates().length);
-        //     // console.log('testowe pobranie: ' + this.loadFromLocalStorageStates()[5].name);
-        //     console.log('czas od załądowania z api (w ms): ' + timeFromLastDownloadFromApi);
-        //     this.loadFromLocalStorageStates();
-        // } else {
-        //     console.log('pobranie z serwera');
-        //     this.downloadFromAPI();
-        // }
-
-
         if(this.ifDownloadFromApi(storage.getStorageDate()) == false && this.loadFromLocalStorageStates().length > 0) {
             console.log('pobranie z localstorage; lenght:' + this.loadFromLocalStorageStates().length);
-            // console.log('testowe pobranie: ' + this.loadFromLocalStorageStates()[5].name);
-            console.log('czas od załądowania z api < 7 dni ');
             this.loadFromLocalStorageStates();
         } else {
             console.log('pobranie z serwera');
             this.downloadFromAPI();
         }
-
-        // this.downloadFromAPI();
     }
 
+    // pobranie danych z API; zapisanie w local storage pobranych danych i timestamp pobrania
     downloadFromAPI() { 
         fetch(this.url)
             .then(response => {
                 response.json().then(data => {
                     console.log('data from api:', data);
+
+                    this.loopForOldData(storage.getStorageStates(), data);
+
                     let time = new Date();
                     this.dateDownloadFromApi = time.getTime();
+                    storage.saveStorageDate(this.dateDownloadFromApi);
 
                     storage.saveStorageStates(data);
-                    storage.saveStorageDate(this.dateDownloadFromApi);
                 })
             })
         
     }
 
+    // pobieranie z localStorage zapisanych danych państw
     loadFromLocalStorageStates() {
         let listFromStorage = storage.getStorageStates();
         return listFromStorage;
     }
 
+    // sprawdzenie, czy ponowanie pobrać dane z API (zwrócenie flagi true = pobrać, false = korzystać z localStorage)
     ifDownloadFromApi(timeSavingInLocalStorage) {
         const MS_IN_6DAYS = 6*24*60*60*1000;
         const timeNow = (new Date).getTime();
         const difference = timeNow - timeSavingInLocalStorage;
 
-        if(difference <= MS_IN_6DAYS) {
+        if(difference <= 30000) {
+            console.log('od ostatniego pobrania upłynęło mało czasu i korzystam z localstorage')
             return false;
         } else {
+            console.log('od ostatniego pobrania upłynęło za dużo czasu i pobieram z API')
             return true;
+        }
+    }
+
+    // porównanie populacji z dwóch zbiorów danych
+    comparePopulation(stateDataOld, stateDataNew) {
+        if(stateDataOld.alpha3Code === stateDataNew.alpha3Code) {
+            if(stateDataOld.population !== stateDataNew.population) {
+                console.log('zmiana w populacji dla: ', stateDataOld.name);
+                this.tableAfterComparison.push(stateDataOld.name);
+                return ;
+            } 
+        }
+    }
+
+    // pętla po starym zestawie danych
+    loopForOldData(oldData, newData) {
+        for(let i = 0; i< oldData.length; i++) {
+            console.log('iteracja po oldData');
+            newData.find(el => this.comparePopulation(el, oldData[i]));
         }
     }
 }
 
 const tableWithStates = new TableWithStates();
 
+// klasa od localStorage; oddzielne metody do zapisu i odczytu danych o państwach oraz daty pobrania z API
 class Storage {
     getStorageStates() {
         let states = null;
