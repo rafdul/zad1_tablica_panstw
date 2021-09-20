@@ -23,14 +23,16 @@ window.onload = function() {
 class TableWithStates {
     url = "https://restcountries.eu/rest/v2/all";
     dateDownloadFromApi = '';
-    tableAfterComparison =[];
+    tableAfterComparison = [];
 
     init() {
-        if(this.ifDownloadFromApi(storage.getStorageDate()) == false && this.loadFromLocalStorageStates().length > 0) {
-            console.log('pobranie z localstorage; lenght:' + this.loadFromLocalStorageStates().length);
-            this.loadFromLocalStorageStates();
+        if( this.ifDownloadFromApi( storage.getStorageDate() ) === false && storage.getStorageStates().length > 0 ) {
+            console.log('Pobrałem dane zapisane w localStorage. Liczba państw w localStorage to: ' + storage.getStorageStates().length);
+            console.log('Dane państw zapisane w localStorage: ', storage.getStorageStates());
+            // console.log('tablica w localStorage: ', storage.getStorageStates().length);
+            // this.loadFromLocalStorageStates();
         } else {
-            console.log('pobranie z serwera');
+            console.log('Pobrałem dane z API');
             this.downloadFromAPI();
         }
     }
@@ -40,9 +42,11 @@ class TableWithStates {
         fetch(this.url)
             .then(response => {
                 response.json().then(data => {
-                    console.log('data from api:', data);
+                    console.log('Dane państw pobrane z API:', data);
 
-                    this.loopForOldData(storage.getStorageStates(), data);
+                    if(storage.getStorageStates().length > 0) {
+                        this.loopForOldData(storage.getStorageStates(), data);
+                    }
 
                     let time = new Date();
                     this.dateDownloadFromApi = time.getTime();
@@ -55,22 +59,22 @@ class TableWithStates {
     }
 
     // pobieranie z localStorage zapisanych danych państw
-    loadFromLocalStorageStates() {
-        let listFromStorage = storage.getStorageStates();
-        return listFromStorage;
-    }
+    // loadFromLocalStorageStates() {
+    //     let listFromStorage = storage.getStorageStates();
+    //     return listFromStorage;
+    // }
 
     // sprawdzenie, czy ponowanie pobrać dane z API (zwrócenie flagi true = pobrać, false = korzystać z localStorage)
     ifDownloadFromApi(timeSavingInLocalStorage) {
         const MS_IN_6DAYS = 6*24*60*60*1000;
         const timeNow = (new Date).getTime();
-        const difference = timeNow - timeSavingInLocalStorage;
+        const differenceInMs = timeNow - timeSavingInLocalStorage;
 
-        if(difference <= 30000) {
-            console.log('od ostatniego pobrania upłynęło mało czasu i korzystam z localstorage')
+        if(differenceInMs <= 30000) {
+            console.log('Od ostatniego pobrania z API upłynęło mniej niż ' + 30000 + 'ms więc korzystam z localstorage i nie pobieram nowych danych z API.')
             return false;
         } else {
-            console.log('od ostatniego pobrania upłynęło za dużo czasu i pobieram z API')
+            console.log('Od ostatniego pobrania z API upłynęło więcej niż 6 dni, więc ponownie pobieram dane z API.')
             return true;
         }
     }
@@ -79,19 +83,21 @@ class TableWithStates {
     comparePopulation(stateDataOld, stateDataNew) {
         if(stateDataOld.alpha3Code === stateDataNew.alpha3Code) {
             if(stateDataOld.population !== stateDataNew.population) {
-                console.log('zmiana w populacji dla: ', stateDataOld.name);
+                // console.log('liczba ludności zmieniła się w: ', stateDataOld.name);
                 this.tableAfterComparison.push(stateDataOld.name);
                 return ;
             } 
-        }
+        } 
     }
 
     // pętla po starym zestawie danych
     loopForOldData(oldData, newData) {
         for(let i = 0; i< oldData.length; i++) {
-            console.log('iteracja po oldData');
             newData.find(el => this.comparePopulation(el, oldData[i]));
         }
+        return (this.tableAfterComparison.length > 0) 
+                ? console.log('Od ostatniego pobrania z API zmieniła się liczba ludności w krajach: ', this.tableAfterComparison) 
+                : console.log('Od ostatniego pobrania z API nie zmieniła się liczba ludności w żadnym kraju.');
     }
 }
 
@@ -103,34 +109,30 @@ class Storage {
         let states = null;
         if(localStorage.getItem('states') !== null ) {
             states = JSON.parse( localStorage.getItem('states') );
-            console.log('states z local 1:', states);
         } else {
             states = [];
-            console.log('states z local 2:', states);
         }
+        // console.log('Dane państw zapisane w localStorage: ', states);
         return states;
     }
 
     saveStorageStates(states) {
         localStorage.setItem('states', JSON.stringify(states));
-        console.log('zapisanie states w storage');
     }
 
     getStorageDate() {
         let date = null;
         if(localStorage.getItem('date') !== null ) {
             date = localStorage.getItem('date');
-            console.log('date z local 1:', date);
         } else {
             date = [];
-            console.log('date z local 2:', date);
         }
+        // console.log('Data pobrania z API zapisana w localStorage (w ms): ', date);
         return date;
     }
 
     saveStorageDate(date) {
         localStorage.setItem('date', date);
-        console.log('zapisanie date w storage', date);
     }
 }
 
