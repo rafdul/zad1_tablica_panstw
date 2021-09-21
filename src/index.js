@@ -25,12 +25,13 @@ var textsForConsoleLog = {
         init: {
             a: 'Pobrałem dane zapisane w localStorage. Liczba państw w localStorage to: ',
             b: 'Dane państw zapisane w localStorage: ',
-            c: 'Pobrałem dane z API',
+            c: 'Łączę się z API',
         },
         downloadFromAPI: {
             a: 'Dane państw pobrane z API:',
+            b: 'Brak łączności z API',
         },
-        checkIfDownloadFromApi: {
+        downloadFromApiAgain: {
             a: 'Korzystam z localstorage i nie pobieram nowych danych z API. Od ostatniego pobrania z API upłynęło mniej niż ',
             b: 'Od ostatniego pobrania z API upłynęło więcej niż 6 dni, więc ponownie pobieram dane z API.',
         },
@@ -47,7 +48,7 @@ class TableWithStates {
     tableAfterComparison = [];
 
     init() {
-        if( this.checkIfDownloadFromApi( storage.getStorageDate() ) === false && storage.getStorageStates().length > 0 ) {
+        if( this.downloadFromApiAgain( storage.getStorageDate() ) === false && storage.getStorageStates().length > 0 ) {
             console.log(textsForConsoleLog.tableWithStates.init.a, storage.getStorageStates().length);
             console.log(textsForConsoleLog.tableWithStates.init.b, storage.getStorageStates());
         } else {
@@ -57,37 +58,59 @@ class TableWithStates {
     }
 
     // pobranie danych z API; zapisanie w local storage pobranych danych i timestamp pobrania
-    downloadFromAPI() { 
-        fetch(this.url)
-            .then(response => {
-                response.json().then(data => {
-                    console.log(textsForConsoleLog.tableWithStates.downloadFromAPI.a, data);
+    // downloadFromAPI() { 
+    //     fetch(this.url)
+    //         .then(response => response.json())
+    //         .then(data => {
+    //             console.log(textsForConsoleLog.tableWithStates.downloadFromAPI.a, data);
 
-                    if(storage.getStorageStates().length > 0) {
-                        this.infoAboutChangingPopulation(storage.getStorageStates(), data);
-                    }
+    //             if(storage.getStorageStates().length > 0) {
+    //                 this.infoAboutChangingPopulation(storage.getStorageStates(), data);
+    //             }
 
-                    let time = new Date();
-                    this.dateDownloadFromApi = time.getTime();
-                    storage.saveStorageDate(this.dateDownloadFromApi);
+    //             let time = new Date();
+    //             this.dateDownloadFromApi = time.getTime();
+    //             storage.saveStorageDate(this.dateDownloadFromApi);
 
-                    storage.saveStorageStates(data);
-                })
-            })
+    //             storage.saveStorageStates(data);
+    //         })
+    //         .catch(err => console.log(textsForConsoleLog.tableWithStates.downloadFromAPI.b))
         
+    // }
+
+    // pobranie danych z API; zapisanie w local storage pobranych danych i timestamp pobrania (wersja async / await)
+    downloadFromAPI = async() => { 
+        try {
+            const response = await fetch(this.url);
+            const responseJson = await response.json();
+            console.log(textsForConsoleLog.tableWithStates.downloadFromAPI.a, responseJson);
+
+            if(storage.getStorageStates().length > 0) {
+                this.infoAboutChangingPopulation(storage.getStorageStates(), responseJson);
+            }
+
+            let time = new Date();
+            this.dateDownloadFromApi = time.getTime();
+            storage.saveStorageDate(this.dateDownloadFromApi);
+
+            storage.saveStorageStates(responseJson);
+        }
+        catch(err) {
+            console.log(textsForConsoleLog.tableWithStates.downloadFromAPI.b)
+        }
     }
 
     // sprawdzenie, czy ponowanie pobrać dane z API (zwrócenie flagi true = pobrać, false = korzystać z localStorage)
-    checkIfDownloadFromApi(timeDownloadFromApi) {
+    downloadFromApiAgain(timeDownloadFromApi) {
         const MS_IN_6DAYS = 6*24*60*60*1000;
         const timeNow = (new Date).getTime();
         const differenceInMs = timeNow - timeDownloadFromApi;
 
         if(differenceInMs <= 30000) {
-            console.log(textsForConsoleLog.tableWithStates.checkIfDownloadFromApi.a, 30000 + 'ms')
+            console.log(textsForConsoleLog.tableWithStates.downloadFromApiAgain.a, 30000 + 'ms')
             return false;
         } else {
-            console.log(textsForConsoleLog.tableWithStates.checkIfDownloadFromApi.b)
+            console.log(textsForConsoleLog.tableWithStates.downloadFromApiAgain.b)
             return true;
         }
     }
