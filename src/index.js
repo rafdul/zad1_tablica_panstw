@@ -20,6 +20,7 @@ window.onload = function() {
     tableWithStates.init();
 }
 
+// zmienna zawierająca bibliotekę komunikatów w konsoli
 var textsForConsoleLog = {
     tableWithStates: {
         init: {
@@ -40,6 +41,11 @@ var textsForConsoleLog = {
             b:'Od ostatniego pobrania z API nie zmieniła się liczba ludności w żadnym kraju.',
         }
     },
+    storage: {
+        saveStorage: {
+            a: 'Błąd zapisu w localStorage (brak przekazanych danych)',
+        }
+    }
 }
 
 class TableWithStates {
@@ -48,35 +54,14 @@ class TableWithStates {
     tableAfterComparison = [];
 
     init() {
-        if( this.downloadFromApiAgain( storage.getStorageDate() ) === false && storage.getStorageStates().length > 0 ) {
-            console.log(textsForConsoleLog.tableWithStates.init.a, storage.getStorageStates().length);
-            console.log(textsForConsoleLog.tableWithStates.init.b, storage.getStorageStates());
+        if( this.downloadFromApiAgain( storage.getStorage('date') ) === false && storage.getStorage('states').length > 0 ) {
+            console.log(textsForConsoleLog.tableWithStates.init.a, storage.getStorage('states').length);
+            console.log(textsForConsoleLog.tableWithStates.init.b, storage.getStorage('states'));
         } else {
             console.log(textsForConsoleLog.tableWithStates.init.c);
             this.downloadFromAPI();
         }
     }
-
-    // pobranie danych z API; zapisanie w local storage pobranych danych i timestamp pobrania
-    // downloadFromAPI() { 
-    //     fetch(this.url)
-    //         .then(response => response.json())
-    //         .then(data => {
-    //             console.log(textsForConsoleLog.tableWithStates.downloadFromAPI.a, data);
-
-    //             if(storage.getStorageStates().length > 0) {
-    //                 this.infoAboutChangingPopulation(storage.getStorageStates(), data);
-    //             }
-
-    //             let time = new Date();
-    //             this.dateDownloadFromApi = time.getTime();
-    //             storage.saveStorageDate(this.dateDownloadFromApi);
-
-    //             storage.saveStorageStates(data);
-    //         })
-    //         .catch(err => console.log(textsForConsoleLog.tableWithStates.downloadFromAPI.b))
-        
-    // }
 
     // pobranie danych z API; zapisanie w local storage pobranych danych i timestamp pobrania (wersja async / await)
     downloadFromAPI = async() => { 
@@ -85,15 +70,17 @@ class TableWithStates {
             const responseJson = await response.json();
             console.log(textsForConsoleLog.tableWithStates.downloadFromAPI.a, responseJson);
 
-            if(storage.getStorageStates().length > 0) {
-                this.infoAboutChangingPopulation(storage.getStorageStates(), responseJson);
+            if(storage.getStorage('states').length > 0) {
+                this.infoAboutChangingPopulation(storage.getStorage('states'), responseJson);
             }
 
             let time = new Date();
             this.dateDownloadFromApi = time.getTime();
-            storage.saveStorageDate(this.dateDownloadFromApi);
+            // storage.saveStorageDate(this.dateDownloadFromApi);
+            storage.saveStorage('date', this.dateDownloadFromApi);
 
-            storage.saveStorageStates(responseJson);
+            // storage.saveStorageStates(responseJson);
+            storage.saveStorage('states', responseJson);
         }
         catch(err) {
             console.log(textsForConsoleLog.tableWithStates.downloadFromAPI.b)
@@ -141,34 +128,24 @@ const tableWithStates = new TableWithStates();
 
 // klasa od localStorage; oddzielne metody do zapisu i odczytu danych o państwach oraz daty pobrania z API
 class Storage {
-    getStorageStates() {
-        let states = null;
-        if(localStorage.getItem('states') !== null ) {
-            states = JSON.parse( localStorage.getItem('states') );
+    getStorage(key) {
+        let content = null;
+        if(localStorage.getItem(key) !== null || localStorage.getItem(key) !== undefined) {
+            if(localStorage.getItem(key) == 'number') {
+                content = localStorage.getItem(key);
+            } else {
+                content = JSON.parse( localStorage.getItem(key) );
+            }
         } else {
-            states = [];
+            content = [];
         }
-        // console.log('Dane państw zapisane w localStorage: ', states);
-        return states;
+        return content;
     }
 
-    saveStorageStates(states) {
-        localStorage.setItem('states', JSON.stringify(states));
-    }
-
-    getStorageDate() {
-        let date = null;
-        if(localStorage.getItem('date') !== null ) {
-            date = localStorage.getItem('date');
-        } else {
-            date = [];
-        }
-        // console.log('Data pobrania z API zapisana w localStorage (w ms): ', date);
-        return date;
-    }
-
-    saveStorageDate(date) {
-        localStorage.setItem('date', date);
+    saveStorage(key, item) {
+        if(item === null || item === undefined) return console.log(textsForConsoleLog.storage.saveStorage.a);
+        if(typeof item == 'number') localStorage.setItem(key, item);
+        localStorage.setItem(key, JSON.stringify(item));
     }
 }
 
